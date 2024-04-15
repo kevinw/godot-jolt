@@ -19,7 +19,6 @@ would use normally, like `RigidBody3D` or `CharacterBody3D`.
 - [What versions of Godot are supported?](#what-versions-of-godot-are-supported)
 - [What platforms are supported?](#what-platforms-are-supported)
 - [How do I get started?](#how-do-i-get-started)
-- [What's the plan going forward?](#whats-the-plan-going-forward)
 - [What settings are there?](#what-settings-are-there)
 - [How do I build from source?](#how-do-i-build-from-source)
 - [What do the versions mean?](#what-do-the-versions-mean)
@@ -42,12 +41,11 @@ should not be relied upon if determinism is a hard requirement.
 
 ## What's not supported?
 
-- `SoftBody3D` is not supported (yet)
 - `WorldBoundaryShape3D` is not supported
 - The physics server is not thread-safe (yet)
-- Double-precision builds of Godot are not supported (yet)
 - Memory usage is not reflected in Godot's performance monitors (yet)
 - Ray-casts do not support `face_index`
+- `SoftBody3D` does not support any interactions with `Area3D`
 
 ## What else is different?
 
@@ -66,9 +64,9 @@ should not be relied upon if determinism is a hard requirement.
 
 Also consider this note from Jolt's [documentation][jdc]:
 
-> In order for the simulation to be accurate, dynamic objects should be in the order of 0.1 to 10
-> meters long and have speeds in the order of 0 to 500 meters per second. Static object should be in
-> the order of 0.1 to 2000 meters long.
+> In order for the simulation to be accurate, dynamic objects should be in the order of 0.1 to 10 m
+> long, have speeds in the order of 0 to 500 m/s and have gravity in the order of 0 to 10 m/s^2.
+> Static object should be in the order of 0.1 to 2000 m long.
 
 ## What versions of Godot are supported?
 
@@ -95,16 +93,6 @@ Fossa) or newer.
 6. Go to "Physics" and then "3D"
 7. Change "Physics Engine" to "JoltPhysics3D"
 8. Restart Godot
-
-## What's the plan going forward?
-
-In no particular order, here are some of the bigger items:
-
-- Adding new types of joints, like Jolt's `DistanceConstraint`
-- Adding support for double-precision, allowing for large worlds
-- Making the physics server thread-safe
-
-See the [`v1.0.0`][prj] project board for a more up-to-date overview.
 
 ## What settings are there?
 
@@ -140,7 +128,6 @@ Godot Jolt is distributed under the MIT license. See [`LICENSE.txt`][lic] for mo
 [jdc]: https://jrouwe.github.io/JoltPhysics/
 [rls]: https://github.com/godot-jolt/godot-jolt/releases/latest
 [ast]: https://godotengine.org/asset-library/asset/1918
-[prj]: https://github.com/orgs/godot-jolt/projects/1
 [set]: docs/settings.md
 [bld]: docs/building.md
 [smv]: https://semver.org/spec/v2.0.0.html

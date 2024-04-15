@@ -1,6 +1,6 @@
 #pragma once
 
-class JoltObjectImpl3D;
+class JoltShapedObjectImpl3D;
 
 class JoltShapeImpl3D {
 public:
@@ -12,9 +12,9 @@ public:
 
 	void set_rid(const RID& p_rid) { rid = p_rid; }
 
-	void add_owner(JoltObjectImpl3D* p_owner);
+	void add_owner(JoltShapedObjectImpl3D* p_owner);
 
-	void remove_owner(JoltObjectImpl3D* p_owner);
+	void remove_owner(JoltShapedObjectImpl3D* p_owner);
 
 	void remove_self();
 
@@ -48,12 +48,6 @@ public:
 		const Vector3& p_origin
 	);
 
-	static JPH::ShapeRefC with_transform(
-		const JPH::Shape* p_shape,
-		const Transform3D& p_transform,
-		const Vector3& p_scale
-	);
-
 	static JPH::ShapeRefC with_center_of_mass_offset(
 		const JPH::Shape* p_shape,
 		const Vector3& p_offset
@@ -68,9 +62,6 @@ public:
 
 	static JPH::ShapeRefC without_custom_shapes(const JPH::Shape* p_shape);
 
-	template<typename TCallable>
-	static JPH::ShapeRefC as_compound(TCallable&& p_callable);
-
 protected:
 	virtual JPH::ShapeRefC _build() const = 0;
 
@@ -78,11 +69,9 @@ protected:
 
 	String _owners_to_string() const;
 
-	HashMap<JoltObjectImpl3D*, int32_t> ref_counts_by_owner;
+	HashMap<JoltShapedObjectImpl3D*, int32_t> ref_counts_by_owner;
 
 	RID rid;
 
 	JPH::ShapeRefC jolt_ref;
 };
-
-#include "jolt_shape_impl_3d.inl"

@@ -203,6 +203,22 @@ These settings are exposed by Godot Jolt and can be found under "Physics" - "Jol
     </tr>
     <tr>
       <td>Collisions</td>
+      <td>Use Enhanced Internal Edge Removal</td>
+      <td>
+        Whether or not to enable the enhanced internal edge removal, which means that extra effort
+        will be made to try to remove collisions with internal edges of
+        <code>ConcavePolygonShape3D</code> and <code>HeightMapShape3D</code>. This makes physics
+        bodies move smoother over such shapes, at the cost of performance.
+      </td>
+      <td>
+        Note that this applies to <code>RigidBody3D</code> as well as queries like
+        <code>get_rest_info</code>, <code>move_and_collide</code> and <code>move_and_slide</code>.
+        <br><br>Also note that enabling this setting will leave the "Active Edge Threshold" setting
+        unused.
+      </td>
+    </tr>
+    <tr>
+      <td>Collisions</td>
       <td>Areas Detect Static Bodies</td>
       <td>
         Whether or not <code>Area3D</code> is able to detect overlaps with <code>StaticBody3D</code>
@@ -231,6 +247,15 @@ These settings are exposed by Godot Jolt and can be found under "Physics" - "Jol
         <br><br>It is strongly recommended that you set up your collision layers and masks in such a
         way that only a few small such kinematic bodies can detect static bodies.
       </td>
+    </tr>
+    <tr>
+      <td>Soft Bodies</td>
+      <td>Point Margin</td>
+      <td>
+        How much of a margin to add to the soft body points. This can keep soft bodies (like cloth)
+        from laying perfectly flush against other surfaces, thereby preventing Z-fighting.
+      </td>
+      <td>-</td>
     </tr>
     <tr>
       <td>Joints</td>
@@ -316,6 +341,8 @@ These settings are exposed by Godot Jolt and can be found under "Physics" - "Jol
         result in things like <code>RigidBody3D</code> sinking into triangle edges or
         <code>move_and_slide</code> behaving in weird ways when going over or pressing up against
         triangle edges.
+        <br><br>Note that this setting has no effect when using the "Use Enhanced Internal Edge
+        Removal" setting.
       </td>
     </tr>
     <tr>

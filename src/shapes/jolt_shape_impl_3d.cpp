@@ -1,6 +1,6 @@
 #include "jolt_shape_impl_3d.hpp"
 
-#include "objects/jolt_object_impl_3d.hpp"
+#include "objects/jolt_shaped_object_impl_3d.hpp"
 #include "shapes/jolt_custom_user_data_shape.hpp"
 
 namespace {
@@ -11,11 +11,11 @@ constexpr float DEFAULT_SOLVER_BIAS = 0.0;
 
 JoltShapeImpl3D::~JoltShapeImpl3D() = default;
 
-void JoltShapeImpl3D::add_owner(JoltObjectImpl3D* p_owner) {
+void JoltShapeImpl3D::add_owner(JoltShapedObjectImpl3D* p_owner) {
 	ref_counts_by_owner[p_owner]++;
 }
 
-void JoltShapeImpl3D::remove_owner(JoltObjectImpl3D* p_owner) {
+void JoltShapeImpl3D::remove_owner(JoltShapedObjectImpl3D* p_owner) {
 	if (--ref_counts_by_owner[p_owner] <= 0) {
 		ref_counts_by_owner.erase(p_owner);
 	}
@@ -100,26 +100,6 @@ JPH::ShapeRefC JoltShapeImpl3D::with_basis_origin(
 	);
 
 	return shape_result.Get();
-}
-
-JPH::ShapeRefC JoltShapeImpl3D::with_transform(
-	const JPH::Shape* p_shape,
-	const Transform3D& p_transform,
-	const Vector3& p_scale
-) {
-	ERR_FAIL_NULL_D(p_shape);
-
-	JPH::ShapeRefC shape = p_shape;
-
-	if (p_scale != Vector3(1.0f, 1.0f, 1.0f)) {
-		shape = with_scale(shape, p_scale);
-	}
-
-	if (p_transform != Transform3D()) {
-		shape = with_basis_origin(shape, p_transform.basis, p_transform.origin);
-	}
-
-	return shape;
 }
 
 JPH::ShapeRefC JoltShapeImpl3D::with_center_of_mass_offset(
@@ -313,7 +293,7 @@ String JoltShapeImpl3D::_owners_to_string() const {
 		return "'<unknown>' and 0 other object(s)";
 	}
 
-	const JoltObjectImpl3D& random_owner = *ref_counts_by_owner.begin()->first;
+	const JoltShapedObjectImpl3D& random_owner = *ref_counts_by_owner.begin()->first;
 
 	return vformat("'%s' and %d other object(s)", random_owner.to_string(), owner_count - 1);
 }

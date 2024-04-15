@@ -56,13 +56,14 @@ JoltSpace3D::JoltSpace3D(JPH::JobSystem* p_job_system)
 	physics_system->SetPhysicsSettings(settings);
 	physics_system->SetGravity(JPH::Vec3::sZero());
 	physics_system->SetContactListener(contact_listener);
+	physics_system->SetSoftBodyContactListener(contact_listener);
 
 	physics_system->SetCombineFriction(
 		[](const JPH::Body& p_body1,
 		   [[maybe_unused]] const JPH::SubShapeID& p_sub_shape_id1,
 		   const JPH::Body& p_body2,
 		   [[maybe_unused]] const JPH::SubShapeID& p_sub_shape_id2) {
-			return abs(min(p_body1.GetFriction(), p_body2.GetFriction()));
+			return ABS(MIN(p_body1.GetFriction(), p_body2.GetFriction()));
 		}
 	);
 
@@ -71,7 +72,7 @@ JoltSpace3D::JoltSpace3D(JPH::JobSystem* p_job_system)
 		   [[maybe_unused]] const JPH::SubShapeID& p_sub_shape_id1,
 		   const JPH::Body& p_body2,
 		   [[maybe_unused]] const JPH::SubShapeID& p_sub_shape_id2) {
-			return clamp(p_body1.GetRestitution() + p_body2.GetRestitution(), 0.0f, 1.0f);
+			return CLAMP(p_body1.GetRestitution() + p_body2.GetRestitution(), 0.0f, 1.0f);
 		}
 	);
 
@@ -158,7 +159,7 @@ void JoltSpace3D::call_queries() {
 
 	for (int32_t i = 0; i < body_count; ++i) {
 		if (JPH::Body* jolt_body = body_accessor.try_get(i)) {
-			if (!jolt_body->IsSensor()) {
+			if (!jolt_body->IsSensor() && !jolt_body->IsSoftBody()) {
 				auto* body = reinterpret_cast<JoltBodyImpl3D*>(jolt_body->GetUserData());
 
 				body->call_queries(*jolt_body);
@@ -346,6 +347,22 @@ JoltPhysicsDirectSpaceState3D* JoltSpace3D::get_direct_state() {
 	return direct_state;
 }
 
+void JoltSpace3D::set_default_area(JoltAreaImpl3D* p_area) {
+	if (default_area == p_area) {
+		return;
+	}
+
+	if (default_area != nullptr) {
+		default_area->set_default_area(false);
+	}
+
+	default_area = p_area;
+
+	if (default_area != nullptr) {
+		default_area->set_default_area(true);
+	}
+}
+
 void JoltSpace3D::add_joint(JPH::Constraint* p_jolt_ref) {
 	physics_system->AddConstraint(p_jolt_ref);
 }
@@ -442,7 +459,11 @@ void JoltSpace3D::_pre_step(float p_step) {
 
 	for (int32_t i = 0; i < body_count; ++i) {
 		if (JPH::Body* jolt_body = body_accessor.try_get(i)) {
-			auto* object = reinterpret_cast<JoltObjectImpl3D*>(jolt_body->GetUserData());
+			if (jolt_body->IsSoftBody()) {
+				continue;
+			}
+
+			auto* object = reinterpret_cast<JoltShapedObjectImpl3D*>(jolt_body->GetUserData());
 
 			object->pre_step(p_step, *jolt_body);
 
@@ -464,6 +485,10 @@ void JoltSpace3D::_post_step(float p_step) {
 
 	for (int32_t i = 0; i < body_count; ++i) {
 		if (JPH::Body* jolt_body = body_accessor.try_get(i)) {
+			if (jolt_body->IsSoftBody()) {
+				continue;
+			}
+
 			auto* object = reinterpret_cast<JoltObjectImpl3D*>(jolt_body->GetUserData());
 
 			object->post_step(p_step, *jolt_body);

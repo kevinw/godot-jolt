@@ -56,8 +56,8 @@ public:
 		uint32_t p_collision_mask,
 		bool p_collide_with_bodies,
 		bool p_collide_with_areas,
-		float* p_closest_safe,
-		float* p_closest_unsafe,
+		real_t* p_closest_safe,
+		real_t* p_closest_unsafe,
 		PhysicsServer3DExtensionShapeRestInfo* p_info
 	) override;
 
@@ -113,8 +113,8 @@ private:
 		const JPH::ObjectLayerFilter& p_object_layer_filter,
 		const JPH::BodyFilter& p_body_filter,
 		const JPH::ShapeFilter& p_shape_filter,
-		float& p_closest_safe,
-		float& p_closest_unsafe
+		real_t& p_closest_safe,
+		real_t& p_closest_unsafe
 	) const;
 
 	bool _body_motion_recover(
@@ -130,8 +130,8 @@ private:
 		const Vector3& p_scale,
 		const Vector3& p_motion,
 		bool p_collide_separation_ray,
-		float& p_safe_fraction,
-		float& p_unsafe_fraction
+		real_t& p_safe_fraction,
+		real_t& p_unsafe_fraction
 	) const;
 
 	bool _body_motion_collide(
@@ -141,6 +141,16 @@ private:
 		float p_margin,
 		int32_t p_max_collisions,
 		PhysicsServer3DExtensionMotionResult* p_result
+	) const;
+
+	void _generate_manifold(
+		const JPH::CollideShapeResult& p_hit,
+		JPH::ContactPoints& p_contact_points1,
+		JPH::ContactPoints& p_contact_points2
+#ifdef JPH_DEBUG_RENDERER
+		,
+		JPH::RVec3Arg p_center_of_mass
+#endif // JPH_DEBUG_RENDERER
 	) const;
 
 	JoltSpace3D* space = nullptr;

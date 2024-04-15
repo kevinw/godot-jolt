@@ -11,8 +11,37 @@ Breaking changes are denoted with ⚠️.
 
 ### Changed
 
+- ⚠️ Changed the inertia of shapeless bodies to be `(1, 1, 1)`, to match Godot Physics.
 - Changed `SeparationRayShape3D` to not treat other convex shapes as solid, meaning it will now only
   ever collide with the hull of other convex shapes, which better matches Godot Physics.
+
+### Added
+
+- Added support for `SoftBody3D`.
+- Added support for double-precision.
+- ⚠️ Added new project setting, "Use Enhanced Internal Edge Detection", which can help alleviate
+  collisions with internal edges of `ConcavePolygonShape3D` and `HeightMapShape3D` shapes, also
+  known as ghost collisions. This setting is enabled by default and may change the behavior of
+  character controllers relying things like `move_and_slide`.
+- Added support for partial custom inertia, where leaving one or two components at zero will use the
+  automatically calculated values for those specific components.
+- Added error-handling for invalid scaling of bodies/shapes.
+
+### Fixed
+
+- ⚠️ Fixed issue with shape queries not returning the full contact manifold. This applies to the
+  `collide_shape` method of `PhysicsDirectSpaceState3D` as well as the `body_test_motion` method of
+  `PhysicsServer3D`, which subsequently affects the `test_move` and `move_and_collide` methods of
+  `PhysicsBody3D` as well as the `move_and_slide` method of `CharacterBody3D`.
+- ⚠️ Fixed issue with the `body_get_direct_state` method of `PhysicsServer3D` returning a non-null
+  reference when the body has no space.
+- Fixed issue with not being able to pass a physics space `RID` to `area_get_param`,
+  `area_attach_object_instance_id` and `area_get_object_instance_id`.
+- Fixed issue where the `inverse_inertia` property of `PhysicsDirectBodyState3D` would have some of
+  its components swapped.
+- Fixed issue where shapeless bodies wouldn't have custom center-of-mass applied to them.
+- Fixed issue with high (>1) damping values producing different results across different update
+  frequencies.
 
 ## [0.12.0] - 2024-01-07
 
