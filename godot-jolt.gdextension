@@ -20,8 +20,10 @@ linux.debug.x86_32 = "linux/godot-jolt_linux-x86_editor.so"
 macos.release = "macos/godot-jolt_macos.framework"
 macos.debug = "macos/godot-jolt_macos_editor.framework"
 
-ios.release = "ios/godot-jolt_ios.framework"
-ios.debug = "ios/godot-jolt_ios_editor.framework"
+# note! this is changed for GodotVision. in that world, Godot's "ios" build has been rebuilt for Vision, but is still called "ios"
+ios.release = "visionos/godot-jolt_visionos.framework"
+ios.release.simulator = "visionos/godot-jolt_visionos_simulator.framework"
+ios.debug = "visionos/godot-jolt_visionos.framework"
 
 android.release.arm64 = "android/libgodot-jolt_android-arm64.so"
 android.debug.arm64 = "android/libgodot-jolt_android-arm64_editor.so"

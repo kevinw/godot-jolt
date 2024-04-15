@@ -218,6 +218,20 @@
       }
     },
     {
+      "name": "visionos-device-base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/ios/visionOS.cmake"
+      }
+    },
+    {
+      "name": "visionos-simulator-base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/ios/visionOSSimulator.cmake"
+      }
+    },
+    {
       "name": "android-arm64-base",
       "inherits": ["arm64-base"],
       "hidden": true,
@@ -303,6 +317,16 @@
       "name": "macos-ios-simulator",
       "displayName": "iOS",
       "inherits": ["macos-base", "ios-base", "ios-simulator-base"]
+    },
+    {
+      "name": "macos-visionos",
+      "displayName": "visionOS",
+      "inherits": ["macos-base", "ios-base", "visionos-device-base"]
+    },
+    {
+      "name": "macos-visionos-simulator",
+      "displayName": "visionOS Simulator",
+      "inherits": ["macos-base", "ios-base", "visionos-simulator-base"]
     },
     {
       "name": "windows-android-arm64",
@@ -831,6 +855,34 @@
       "configurePreset": "macos-ios-simulator",
       "configuration": "Development",
       "displayName": "Development"
+    },
+    {
+      "name": "macos-visionos-simulator-development",
+      "inherits": ["macos-base", "install-base"],
+      "configurePreset": "macos-visionos-simulator",
+      "configuration": "Development",
+      "displayName": "Development"
+    },
+    {
+      "name": "macos-visionos-simulator-distribution",
+      "inherits": ["macos-base", "install-base"],
+      "configurePreset": "macos-visionos-simulator",
+      "configuration": "Distribution",
+      "displayName": "Distribution"
+    },
+    {
+      "name": "macos-visionos-development",
+      "inherits": ["macos-base", "install-base"],
+      "configurePreset": "macos-visionos",
+      "configuration": "Development",
+      "displayName": "Development"
+    },
+    {
+      "name": "macos-visionos-distribution",
+      "inherits": ["macos-base", "install-base"],
+      "configurePreset": "macos-visionos",
+      "configuration": "Distribution",
+      "displayName": "Distribution"
     },
     {
       "name": "macos-ios-simulator-distribution",

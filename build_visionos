@@ -1,0 +1,13 @@
+#!/bin/bash -xe
+
+# builds both device and simulator builds
+
+
+# mac editor 
+cmake --preset macos-clang -DCMAKE_VERBOSE_MAKEFILE=ON && cmake --build --preset macos-clang-editor-distribution
+
+# visionOS simulator
+cmake --preset macos-visionos-simulator -DCMAKE_VERBOSE_MAKEFILE=ON && cmake --build --preset macos-visionos-simulator-distribution
+
+# visionOS device
+cmake --preset macos-visionos -DCMAKE_VERBOSE_MAKEFILE=ON && cmake --build --preset macos-visionos-distribution

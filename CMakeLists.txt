@@ -53,10 +53,12 @@ if(GDJ_USE_MIMALLOC)
 	target_link_libraries(godot-jolt godot-jolt::mimalloc)
 endif()
 
+
 set(is_windows $<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>)
 set(is_linux $<STREQUAL:${CMAKE_SYSTEM_NAME},Linux>)
 set(is_macos $<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>)
 set(is_ios $<STREQUAL:${CMAKE_SYSTEM_NAME},iOS>)
+set(is_visionos $<STREQUAL:${CMAKE_SYSTEM_NAME},visionOS>)
 set(is_android $<STREQUAL:${CMAKE_SYSTEM_NAME},Android>)
 
 set(is_editor_config $<CONFIG:EditorDebug,EditorDevelopment,EditorDistribution>)
@@ -77,6 +79,12 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
 	set(suffix_platform _macos)
 elseif(CMAKE_SYSTEM_NAME STREQUAL iOS)
 	set(suffix_platform _ios)
+elseif(CMAKE_SYSTEM_NAME STREQUAL visionOS)
+	if (is_simulator)
+		set(suffix_platform _visionos_simulator)
+	else()
+		set(suffix_platform _visionos)
+	endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL Android)
 	set(suffix_platform _android)
 else()
@@ -100,7 +108,7 @@ endif()
 set(suffix_editor $<${is_editor_config}:_editor>)
 set(suffix ${suffix_platform}${suffix_arch}${suffix_editor})
 
-if(IOS)
+if(IOS OR VISIONOS)
 	set(info_plist ${templates_dir}/info_ios.plist.in)
 else()
 	set(info_plist ${templates_dir}/info_macos.plist.in)
@@ -163,6 +171,7 @@ target_compile_definitions(godot-jolt
 	PRIVATE $<${is_linux}:GDJ_PLATFORM_LINUX>
 	PRIVATE $<${is_macos}:GDJ_PLATFORM_MACOS>
 	PRIVATE $<${is_ios}:GDJ_PLATFORM_IOS>
+	PRIVATE $<${is_visionos}:GDJ_PLATFORM_VISIONOS>
 	PRIVATE $<${is_android}:GDJ_PLATFORM_ANDROID>
 	PRIVATE $<${is_debug_config}:GDJ_CONFIG_DEBUG>
 	PRIVATE $<${is_development_config}:GDJ_CONFIG_DEVELOPMENT>
@@ -268,6 +277,7 @@ else()
 		PRIVATE $<${is_linux}:-Wl,--version-script,${exports_file}>
 		PRIVATE $<${is_android}:-Wl,--version-script,${exports_file}>
 		PRIVATE $<${is_ios}:-Wl,-exported_symbols_list,${exports_file}>
+		PRIVATE $<${is_visionos}:-Wl,-exported_symbols_list,${exports_file}>
 		PRIVATE $<${is_macos}:-Wl,-exported_symbols_list,${exports_file}>
 		PRIVATE $<${use_static_crt}:-static-libgcc> # Link libgcc statically
 		PRIVATE $<${use_static_crt}:-static-libstdc++> # Link libstdc++ statically
@@ -352,6 +362,7 @@ string(CONCAT addon_platform_dir
 		$<${is_macos}:macos>
 		$<${is_android}:android>
 		$<${is_ios}:ios>
+		$<${is_visionos}:visionos>
 )
 
 install(
