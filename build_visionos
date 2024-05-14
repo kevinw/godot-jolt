@@ -2,12 +2,15 @@
 
 # builds both device and simulator builds
 
+DBG_SYMS=OFF
+CM_OPTS=-DGDJ_INSTALL_DEBUG_SYMBOLS=$DBG_SYMS
+
 
 # mac editor 
-cmake --preset macos-clang -DCMAKE_VERBOSE_MAKEFILE=ON && cmake --build --preset macos-clang-editor-distribution
+cmake --preset macos-clang $CM_OPTS && cmake --build --preset macos-clang-editor-distribution
 
 # visionOS simulator
-cmake --preset macos-visionos-simulator -DCMAKE_VERBOSE_MAKEFILE=ON && cmake --build --preset macos-visionos-simulator-distribution
+cmake --preset macos-visionos-simulator $CM_OPTS && cmake --build --preset macos-visionos-simulator-distribution
 
 # visionOS device
-cmake --preset macos-visionos -DCMAKE_VERBOSE_MAKEFILE=ON && cmake --build --preset macos-visionos-distribution
+cmake --preset macos-visionos $CM_OPTS && cmake --build --preset macos-visionos-distribution
