@@ -826,31 +826,30 @@
     },
     {
       "name": "macos-visionos-simulator-development",
-      "inherits": ["macos-base", "install-base"],
       "configurePreset": "macos-visionos-simulator",
       "configuration": "Development",
-      "displayName": "Development"
+      "displayName": "Development",
+      "targets": ["install"]
     },
     {
       "name": "macos-visionos-simulator-distribution",
-      "inherits": ["macos-base", "install-base"],
       "configurePreset": "macos-visionos-simulator",
       "configuration": "Distribution",
       "displayName": "Distribution"
     },
     {
       "name": "macos-visionos-development",
-      "inherits": ["macos-base", "install-base"],
       "configurePreset": "macos-visionos",
       "configuration": "Development",
-      "displayName": "Development"
+      "displayName": "Development",
+      "targets": ["install"]
     },
     {
       "name": "macos-visionos-distribution",
-      "inherits": ["macos-base", "install-base"],
       "configurePreset": "macos-visionos",
       "configuration": "Distribution",
-      "displayName": "Distribution"
+      "displayName": "Distribution",
+      "targets": ["install"]
     },
     {
       "name": "macos-ios-simulator-distribution",
