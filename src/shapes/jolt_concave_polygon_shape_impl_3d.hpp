@@ -16,14 +16,18 @@ public:
 
 	void set_margin([[maybe_unused]] float p_margin) override { }
 
+	AABB get_aabb() const override { return aabb; }
+
 	String to_string() const;
 
 private:
 	JPH::ShapeRefC _build() const override;
 
-	JPH::ShapeRefC _build_double_sided(const JPH::Shape* p_shape) const;
+	AABB _calculate_aabb() const;
+
+	AABB aabb;
 
 	PackedVector3Array faces;
 
-	bool backface_collision = false;
+	bool back_face_collision = false;
 };

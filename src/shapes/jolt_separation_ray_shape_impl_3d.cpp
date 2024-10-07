@@ -10,12 +10,6 @@ Variant JoltSeparationRayShapeImpl3D::get_data() const {
 }
 
 void JoltSeparationRayShapeImpl3D::set_data(const Variant& p_data) {
-	ON_SCOPE_EXIT {
-		_invalidated();
-	};
-
-	destroy();
-
 	ERR_FAIL_COND(p_data.get_type() != Variant::DICTIONARY);
 
 	const Dictionary data = p_data;
@@ -26,8 +20,21 @@ void JoltSeparationRayShapeImpl3D::set_data(const Variant& p_data) {
 	const Variant maybe_slide_on_slope = data.get("slide_on_slope", {});
 	ERR_FAIL_COND(maybe_slide_on_slope.get_type() != Variant::BOOL);
 
-	length = maybe_length;
-	slide_on_slope = maybe_slide_on_slope;
+	const float new_length = maybe_length;
+	const bool new_slide_on_slope = maybe_slide_on_slope;
+
+	QUIET_FAIL_COND(new_length == length && new_slide_on_slope == slide_on_slope);
+
+	length = new_length;
+	slide_on_slope = new_slide_on_slope;
+
+	destroy();
+}
+
+AABB JoltSeparationRayShapeImpl3D::get_aabb() const {
+	constexpr float size_xy = 0.1f;
+	constexpr float half_size_xy = size_xy / 2.0f;
+	return {Vector3(-half_size_xy, -half_size_xy, 0.0f), Vector3(size_xy, size_xy, length)};
 }
 
 String JoltSeparationRayShapeImpl3D::to_string() const {

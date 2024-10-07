@@ -3,10 +3,10 @@
 #ifdef GDJ_CONFIG_EDITOR
 
 class JoltJointGizmoPlugin3D final : public EditorNode3DGizmoPlugin {
-	GDCLASS_NO_WARN(JoltJointGizmoPlugin3D, EditorNode3DGizmoPlugin)
+	GDCLASS_QUIET(JoltJointGizmoPlugin3D, EditorNode3DGizmoPlugin)
 
 private:
-	static void _bind_methods();
+	static void _bind_methods() { }
 
 public:
 	JoltJointGizmoPlugin3D() = default;
@@ -21,12 +21,12 @@ public:
 
 	void _redraw(const Ref<EditorNode3DGizmo>& p_gizmo) override;
 
-	void redraw_gizmos();
-
 private:
 	void _create_materials();
 
 	void _create_redraw_timer(const Ref<EditorNode3DGizmo>& p_gizmo);
+
+	void _redraw_gizmos();
 
 	mutable HashSet<Ref<EditorNode3DGizmo>> gizmos;
 

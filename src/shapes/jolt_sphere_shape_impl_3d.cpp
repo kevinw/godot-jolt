@@ -5,15 +5,19 @@ Variant JoltSphereShapeImpl3D::get_data() const {
 }
 
 void JoltSphereShapeImpl3D::set_data(const Variant& p_data) {
-	ON_SCOPE_EXIT {
-		_invalidated();
-	};
-
-	destroy();
-
 	ERR_FAIL_COND(p_data.get_type() != Variant::FLOAT);
 
-	radius = p_data;
+	const float new_radius = p_data;
+	QUIET_FAIL_COND(new_radius == radius);
+
+	radius = new_radius;
+
+	destroy();
+}
+
+AABB JoltSphereShapeImpl3D::get_aabb() const {
+	const Vector3 half_extents(radius, radius, radius);
+	return {-half_extents, half_extents * 2.0f};
 }
 
 String JoltSphereShapeImpl3D::to_string() const {

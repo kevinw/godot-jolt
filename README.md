@@ -21,12 +21,11 @@ would use normally, like `RigidBody3D` or `CharacterBody3D`.
 - [How do I get started?](#how-do-i-get-started)
 - [What settings are there?](#what-settings-are-there)
 - [How do I build from source?](#how-do-i-build-from-source)
-- [What do the versions mean?](#what-do-the-versions-mean)
 - [What's the license?](#whats-the-license)
 
 ## What features are there?
 
-Better performance, mainly, but also just having different characteristics compared to Godot
+Better performance, mainly, but also generally having a more stable simulation compared to Godot
 Physics.
 
 There are also (completely optional) substitute nodes available for all the joints, which line up
@@ -41,20 +40,18 @@ should not be relied upon if determinism is a hard requirement.
 
 ## What's not supported?
 
-- `WorldBoundaryShape3D` is not supported
 - The physics server is not thread-safe (yet)
 - Memory usage is not reflected in Godot's performance monitors (yet)
-- Ray-casts do not support `face_index`
 - `SoftBody3D` does not support any interactions with `Area3D`
 
 ## What else is different?
 
+- Scale is actually used for all bodies, shapes and shape queries, except for `SoftBody3D`
 - `Area3D` detecting static bodies is opt-in, at a potentially [heavy performance/memory cost][jst]
 - Joints only support soft limits through their substitutes (`JoltHingeJoint3D`, etc.)
 - Springs and linear motors are actually implemented in `Generic6DOFJoint3D`
 - Single-body joints will make `node_a` be the "world node" rather than `node_b`
-- Ray-casts using `hit_back_faces` will hit the back/inside of all shapes, not only concave ones
-- Ray-casts are not affected by the `backface_collision` property of `ConcavePolygonShape3D`
+- Ray-casts returning `face_index` is opt-in, at a potentially [heavy memory cost][jst]
 - Shape-casts should be more accurate, but their cost also scale with the cast distance
 - Shape margins are used, but are treated as an upper bound and scale with the shape's extents
 - Manipulating a body's shape(s) after it has entered a scene tree can be costly
@@ -70,7 +67,7 @@ Also consider this note from Jolt's [documentation][jdc]:
 
 ## What versions of Godot are supported?
 
-Currently the **only** supported version is **Godot 4.2** (including 4.2.x).
+Currently the **only** supported version is **Godot 4.3** (including 4.3.x).
 
 ## What platforms are supported?
 
@@ -102,21 +99,6 @@ See [`docs/settings.md`][set] for information about the project settings availab
 
 See [`docs/building.md`][bld] for information about how to build Godot Jolt from source.
 
-## What do the versions mean?
-
-Godot Jolt adheres to [Semantic Versioning][smv], formatted as `<major>.<minor>.<patch>`. The major
-version will be incremented when backwards-incompatible API changes are made, the minor version will
-be incremented when backwards-compatible API changes are made and the patch version will be
-incremented when changes are made that don't affect the API.
-
-"API", in this case, refers to any user-facing parts of the extension, such as nodes, properties,
-methods, parameters or project settings.
-
-Note that major version `0.x.y` carries a special meaning in semantic versioning, where even minor
-versions may contain backwards-incompatible changes.
-
-See [`CHANGELOG.md`][chl] for details about what notable changes were included in each version.
-
 ## What's the license?
 
 Godot Jolt is distributed under the MIT license. See [`LICENSE.txt`][lic] for more details and
@@ -130,7 +112,5 @@ Godot Jolt is distributed under the MIT license. See [`LICENSE.txt`][lic] for mo
 [ast]: https://godotengine.org/asset-library/asset/1918
 [set]: docs/settings.md
 [bld]: docs/building.md
-[smv]: https://semver.org/spec/v2.0.0.html
-[chl]: CHANGELOG.md
 [lic]: LICENSE.txt
 [trd]: THIRDPARTY.txt

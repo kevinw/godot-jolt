@@ -41,11 +41,17 @@ bool JoltPhysicsDirectSpaceState3D::_intersect_ray(
 	const auto vector = JPH::Vec3(to - from);
 	const JPH::RRayCast ray(from, vector);
 
-	JPH::RayCastSettings settings;
-	settings.mTreatConvexAsSolid = p_hit_from_inside;
-	settings.mBackFaceMode = p_hit_back_faces
+	const JPH::EBackFaceMode back_face_mode = p_hit_back_faces
 		? JPH::EBackFaceMode::CollideWithBackFaces
 		: JPH::EBackFaceMode::IgnoreBackFaces;
+
+	JPH::RayCastSettings settings;
+	settings.mTreatConvexAsSolid = p_hit_from_inside;
+	settings.mBackFaceModeTriangles = back_face_mode;
+
+	if (JoltProjectSettings::use_legacy_ray_casting()) {
+		settings.mBackFaceModeConvex = back_face_mode;
+	}
 
 	JoltQueryCollectorClosest<JPH::CastRayCollector> collector;
 
@@ -89,6 +95,7 @@ bool JoltPhysicsDirectSpaceState3D::_intersect_ray(
 		const int32_t shape_index = shaped_object->find_shape_index(sub_shape_id);
 		ERR_FAIL_COND_D(shape_index == -1);
 		p_result->shape = shape_index;
+		p_result->face_index = _try_get_face_index(*body, sub_shape_id);
 	}
 
 	return true;
@@ -157,38 +164,22 @@ int32_t JoltPhysicsDirectSpaceState3D::_intersect_shape(
 		return 0;
 	}
 
-#ifdef DEBUG_ENABLED
-	ERR_FAIL_COND_D_MSG(
-		p_transform.basis.determinant() == 0.0f,
-		"intersect_shape failed due to being passed an invalid transform. "
-		"The basis was found to be singular, which is not supported by Godot Jolt. "
-		"This is likely caused by one or more axes having a scale of zero."
-	);
-#endif // DEBUG_ENABLED
-
 	space->try_optimize();
 
-	auto* physics_server = static_cast<JoltPhysicsServer3D*>(PhysicsServer3D::get_singleton());
-
-	JoltShapeImpl3D* shape = physics_server->get_shape(p_shape_rid);
+	JoltShapeImpl3D* shape = JoltPhysicsServer3D::get_singleton()->get_shape(p_shape_rid);
 	ERR_FAIL_NULL_D(shape);
 
 	const JPH::ShapeRefC jolt_shape = shape->try_build();
 	ERR_FAIL_NULL_D(jolt_shape);
 
-	Vector3 scale;
-	const Transform3D transform = Math::decomposed(p_transform, scale);
+	Transform3D transform = p_transform;
 
-#ifdef DEBUG_ENABLED
-	ERR_FAIL_COND_D_MSG(
-		!jolt_shape->IsValidScale(to_jolt(scale)),
-		vformat(
-			"intersect_shape failed due to being passed an invalid transform. "
-			"A scale of %v is not supported by Godot Jolt for this shape type.",
-			scale
-		)
-	);
-#endif // DEBUG_ENABLED
+	ENSURE_SCALE_NOT_ZERO(transform, "intersect_shape was passed an invalid transform.");
+
+	Vector3 scale;
+	Math::decompose(transform, scale);
+
+	ENSURE_SCALE_VALID(jolt_shape, scale, "intersect_shape was passed an invalid transform.");
 
 	const Vector3 com_scaled = to_godot(jolt_shape->GetCenterOfMass());
 	const Transform3D transform_com = transform.translated_local(com_scaled);
@@ -197,6 +188,7 @@ int32_t JoltPhysicsDirectSpaceState3D::_intersect_shape(
 	settings.mMaxSeparationDistance = (float)p_margin;
 
 	if (JoltProjectSettings::use_enhanced_edge_removal()) {
+		settings.mActiveEdgeMode = JPH::EActiveEdgeMode::CollideWithAll;
 		settings.mCollectFacesMode = JPH::ECollectFacesMode::CollectFaces;
 	}
 
@@ -264,38 +256,29 @@ bool JoltPhysicsDirectSpaceState3D::_cast_motion(
 		"Providing rest info as part of a shape-cast is not supported by Godot Jolt."
 	);
 
-#ifdef DEBUG_ENABLED
-	ERR_FAIL_COND_D_MSG(
-		p_transform.basis.determinant() == 0.0f,
-		"cast_motion failed due to being passed an invalid transform. "
-		"The basis was found to be singular, which is not supported by Godot Jolt. "
-		"This is likely caused by one or more axes having a scale of zero."
-	);
-#endif // DEBUG_ENABLED
-
 	space->try_optimize();
 
-	auto* physics_server = static_cast<JoltPhysicsServer3D*>(PhysicsServer3D::get_singleton());
-
-	JoltShapeImpl3D* shape = physics_server->get_shape(p_shape_rid);
+	JoltShapeImpl3D* shape = JoltPhysicsServer3D::get_singleton()->get_shape(p_shape_rid);
 	ERR_FAIL_NULL_D(shape);
 
 	const JPH::ShapeRefC jolt_shape = shape->try_build();
 	ERR_FAIL_NULL_D(jolt_shape);
 
-	Vector3 scale;
-	const Transform3D transform = Math::decomposed(p_transform, scale);
+	Transform3D transform = p_transform;
 
-#ifdef DEBUG_ENABLED
-	ERR_FAIL_COND_D_MSG(
-		!jolt_shape->IsValidScale(to_jolt(scale)),
-		vformat(
-			"cast_motion failed due to being passed an invalid transform. "
-			"A scale of %v is not supported by Godot Jolt for this shape type.",
-			scale
-		)
+	ENSURE_SCALE_NOT_ZERO(
+		transform,
+		"cast_motion (maybe from ShapeCast3D?) was passed an invalid transform."
 	);
-#endif // DEBUG_ENABLED
+
+	Vector3 scale;
+	Math::decompose(transform, scale);
+
+	ENSURE_SCALE_VALID(
+		jolt_shape,
+		scale,
+		"cast_motion (maybe from ShapeCast3D?) was passed an invalid transform."
+	);
 
 	const Vector3 com_scaled = to_godot(jolt_shape->GetCenterOfMass());
 	Transform3D transform_com = transform.translated_local(com_scaled);
@@ -304,6 +287,7 @@ bool JoltPhysicsDirectSpaceState3D::_cast_motion(
 	settings.mMaxSeparationDistance = (float)p_margin;
 
 	if (JoltProjectSettings::use_enhanced_edge_removal()) {
+		settings.mActiveEdgeMode = JPH::EActiveEdgeMode::CollideWithAll;
 		settings.mCollectFacesMode = JPH::ECollectFacesMode::CollectFaces;
 	}
 
@@ -346,38 +330,22 @@ bool JoltPhysicsDirectSpaceState3D::_collide_shape(
 		return false;
 	}
 
-#ifdef DEBUG_ENABLED
-	ERR_FAIL_COND_D_MSG(
-		p_transform.basis.determinant() == 0.0f,
-		"collide_shape failed due to being passed an invalid transform. "
-		"The basis was found to be singular, which is not supported by Godot Jolt. "
-		"This is likely caused by one or more axes having a scale of zero."
-	);
-#endif // DEBUG_ENABLED
-
 	space->try_optimize();
 
-	auto* physics_server = static_cast<JoltPhysicsServer3D*>(PhysicsServer3D::get_singleton());
-
-	JoltShapeImpl3D* shape = physics_server->get_shape(p_shape_rid);
+	JoltShapeImpl3D* shape = JoltPhysicsServer3D::get_singleton()->get_shape(p_shape_rid);
 	ERR_FAIL_NULL_D(shape);
 
 	const JPH::ShapeRefC jolt_shape = shape->try_build();
 	ERR_FAIL_NULL_D(jolt_shape);
 
-	Vector3 scale;
-	const Transform3D transform = Math::decomposed(p_transform, scale);
+	Transform3D transform = p_transform;
 
-#ifdef DEBUG_ENABLED
-	ERR_FAIL_COND_D_MSG(
-		!jolt_shape->IsValidScale(to_jolt(scale)),
-		vformat(
-			"collide_shape failed due to being passed an invalid transform. "
-			"A scale of %v is not supported by Godot Jolt for this shape type.",
-			scale
-		)
-	);
-#endif // DEBUG_ENABLED
+	ENSURE_SCALE_NOT_ZERO(transform, "collide_shape was passed an invalid transform.");
+
+	Vector3 scale;
+	Math::decompose(transform, scale);
+
+	ENSURE_SCALE_VALID(jolt_shape, scale, "collide_shape was passed an invalid transform.");
 
 	const Vector3 com_scaled = to_godot(jolt_shape->GetCenterOfMass());
 	const Transform3D transform_com = transform.translated_local(com_scaled);
@@ -463,38 +431,29 @@ bool JoltPhysicsDirectSpaceState3D::_rest_info(
 	bool p_collide_with_areas,
 	PhysicsServer3DExtensionShapeRestInfo* p_info
 ) {
-#ifdef DEBUG_ENABLED
-	ERR_FAIL_COND_D_MSG(
-		p_transform.basis.determinant() == 0.0f,
-		"get_rest_info failed due to being passed an invalid transform. "
-		"The basis was found to be singular, which is not supported by Godot Jolt. "
-		"This is likely caused by one or more axes having a scale of zero."
-	);
-#endif // DEBUG_ENABLED
-
 	space->try_optimize();
 
-	auto* physics_server = static_cast<JoltPhysicsServer3D*>(PhysicsServer3D::get_singleton());
-
-	JoltShapeImpl3D* shape = physics_server->get_shape(p_shape_rid);
+	JoltShapeImpl3D* shape = JoltPhysicsServer3D::get_singleton()->get_shape(p_shape_rid);
 	ERR_FAIL_NULL_D(shape);
 
 	const JPH::ShapeRefC jolt_shape = shape->try_build();
 	ERR_FAIL_NULL_D(jolt_shape);
 
-	Vector3 scale;
-	const Transform3D transform = Math::decomposed(p_transform, scale);
+	Transform3D transform = p_transform;
 
-#ifdef DEBUG_ENABLED
-	ERR_FAIL_COND_D_MSG(
-		!jolt_shape->IsValidScale(to_jolt(scale)),
-		vformat(
-			"get_rest_info failed due to being passed an invalid transform. "
-			"A scale of %v is not supported by Godot Jolt for this shape type.",
-			scale
-		)
+	ENSURE_SCALE_NOT_ZERO(
+		transform,
+		"get_rest_info (maybe from ShapeCast3D?) was passed an invalid transform."
 	);
-#endif // DEBUG_ENABLED
+
+	Vector3 scale;
+	Math::decompose(transform, scale);
+
+	ENSURE_SCALE_VALID(
+		jolt_shape,
+		scale,
+		"get_rest_info (maybe from ShapeCast3D?) was passed an invalid transform."
+	);
 
 	const Vector3 com_scaled = to_godot(jolt_shape->GetCenterOfMass());
 	const Transform3D transform_com = transform.translated_local(com_scaled);
@@ -503,6 +462,7 @@ bool JoltPhysicsDirectSpaceState3D::_rest_info(
 	settings.mMaxSeparationDistance = (float)p_margin;
 
 	if (JoltProjectSettings::use_enhanced_edge_removal()) {
+		settings.mActiveEdgeMode = JPH::EActiveEdgeMode::CollideWithAll;
 		settings.mCollectFacesMode = JPH::ECollectFacesMode::CollectFaces;
 	}
 
@@ -559,8 +519,7 @@ Vector3 JoltPhysicsDirectSpaceState3D::_get_closest_point_to_object_volume(
 ) const {
 	space->try_optimize();
 
-	auto* physics_server = static_cast<JoltPhysicsServer3D*>(PhysicsServer3D::get_singleton());
-
+	JoltPhysicsServer3D* physics_server = JoltPhysicsServer3D::get_singleton();
 	JoltObjectImpl3D* object = physics_server->get_area(p_object);
 
 	if (object == nullptr) {
@@ -663,28 +622,18 @@ bool JoltPhysicsDirectSpaceState3D::test_body_motion(
 	p_margin = MAX(p_margin, 0.0001f);
 	p_max_collisions = MIN(p_max_collisions, 32);
 
-#ifdef DEBUG_ENABLED
-	ERR_FAIL_COND_D_MSG(
-		p_transform.basis.determinant() == 0.0f,
-		"body_test_motion failed due to being passed an invalid transform. "
-		"The basis was found to be singular, which is not supported by Godot Jolt. "
-		"This is likely caused by one or more axes having a scale of zero."
-	);
-#endif // DEBUG_ENABLED
+	Transform3D transform = p_transform;
 
-	Vector3 scale;
-	Transform3D transform = Math::decomposed(p_transform, scale);
-
-#ifdef DEBUG_ENABLED
-	ERR_FAIL_COND_D_MSG(
-		!p_body.get_jolt_shape()->IsValidScale(to_jolt(scale)),
+	ENSURE_SCALE_NOT_ZERO(
+		transform,
 		vformat(
-			"body_test_motion failed due to being passed an invalid transform. "
-			"A scale of %v is not supported by Godot Jolt for this body.",
-			scale
+			"body_test_motion was passed an invalid transform along with body '%s'.",
+			p_body.to_string()
 		)
 	);
-#endif // DEBUG_ENABLED
+
+	Vector3 scale;
+	Math::decompose(transform, scale);
 
 	space->try_optimize();
 
@@ -712,7 +661,7 @@ bool JoltPhysicsDirectSpaceState3D::test_body_motion(
 		collided = _body_motion_collide(
 			p_body,
 			transform.translated(p_motion * unsafe_fraction),
-			(float)p_motion.length(),
+			p_motion,
 			p_margin,
 			p_max_collisions,
 			p_result
@@ -845,7 +794,7 @@ bool JoltPhysicsDirectSpaceState3D::_cast_motion_impl(
 		float hi = 1.0f;
 		float coeff = 0.5f;
 
-		for (int j = 0; j < step_count; ++j) {
+		for (int32_t j = 0; j < step_count; ++j) {
 			const float fraction = lo + (hi - lo) * coeff;
 
 			if (collides(*other_jolt_body, fraction)) {
@@ -896,6 +845,7 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_recover(
 	settings.mMaxSeparationDistance = p_margin;
 
 	if (JoltProjectSettings::use_enhanced_edge_removal()) {
+		settings.mActiveEdgeMode = JPH::EActiveEdgeMode::CollideWithAll;
 		settings.mCollectFacesMode = JPH::ECollectFacesMode::CollectFaces;
 	}
 
@@ -931,7 +881,7 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_recover(
 
 		float combined_priority = 0.0;
 
-		for (int j = 0; j < hit_count; j++) {
+		for (int32_t j = 0; j < hit_count; j++) {
 			const JPH::CollideShapeResult& hit = collector.get_hit(j);
 
 			const JoltReadableBody3D other_jolt_body = space->read_body(hit.mBodyID2);
@@ -1005,6 +955,7 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_cast(
 	JPH::CollideShapeSettings settings;
 
 	if (JoltProjectSettings::use_enhanced_edge_removal()) {
+		settings.mActiveEdgeMode = JPH::EActiveEdgeMode::CollideWithAll;
 		settings.mCollectFacesMode = JPH::ECollectFacesMode::CollectFaces;
 	}
 
@@ -1034,11 +985,16 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_cast(
 		const Transform3D transform_com = body_transform * transform_com_local;
 		const Transform3D transform_com_unscaled = Math::decomposed(transform_com, scale);
 
-#ifdef DEBUG_ENABLED
-		if (!jolt_shape->IsValidScale(to_jolt(scale))) {
-			continue;
-		}
-#endif // DEBUG_ENABLED
+		ENSURE_SCALE_VALID(
+			jolt_shape,
+			scale,
+			vformat(
+				"body_test_motion was passed an invalid transform along with body '%s'. "
+				"This results in invalid scaling for shape at index %d.",
+				i,
+				p_body.to_string()
+			)
+		);
 
 		real_t shape_safe_fraction = 1.0;
 		real_t shape_unsafe_fraction = 1.0;
@@ -1068,11 +1024,15 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_cast(
 bool JoltPhysicsDirectSpaceState3D::_body_motion_collide(
 	const JoltBodyImpl3D& p_body,
 	const Transform3D& p_transform,
-	float p_distance,
+	const Vector3& p_motion,
 	float p_margin,
 	int32_t p_max_collisions,
 	PhysicsServer3DExtensionMotionResult* p_result
 ) const {
+	if (p_max_collisions == 0) {
+		return false;
+	}
+
 	const JPH::Shape* jolt_shape = p_body.get_jolt_shape();
 
 	const Vector3 com_scaled = to_godot(jolt_shape->GetCenterOfMass());
@@ -1107,18 +1067,26 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_collide(
 		return collided;
 	}
 
-	// HACK(mihe): Without this minimum contact depth we can sometimes end up with very shallow
-	// contacts that end up affecting the outcome of things like `floor_block_on_wall`, where after
-	// one of the recovery iterations (in Godot, not here) we can still find ourselves penetrating a
-	// wall ever so slightly, which `move_and_slide` will interpret as being trapped in a corner and
-	// stop the character altogether. We still need distances smaller than this (like none at all)
-	// to actually emit contacts though, so we clamp it by the distance moved.
-	const float min_contact_depth = MIN(0.0001f, p_distance);
-
 	int32_t count = 0;
 
 	for (int32_t i = 0; i < collector.get_hit_count(); ++i) {
 		const JPH::CollideShapeResult& hit = collector.get_hit(i);
+
+		const float penetration_depth = hit.mPenetrationDepth + p_margin;
+
+		if (penetration_depth <= 0.0f) {
+			continue;
+		}
+
+		const Vector3 normal = to_godot(-hit.mPenetrationAxis.Normalized());
+
+		if (p_motion.length_squared() > 0) {
+			const Vector3 direction = p_motion.normalized();
+
+			if (direction.dot(normal) >= -CMP_EPSILON) {
+				continue;
+			}
+		}
 
 		JPH::ContactPoints contact_points1;
 		JPH::ContactPoints contact_points2;
@@ -1137,12 +1105,6 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_collide(
 			contact_points2.push_back(hit.mContactPointOn2);
 		}
 
-		const float penetration_depth = hit.mPenetrationDepth + p_margin - min_contact_depth;
-
-		if (penetration_depth <= 0.0f) {
-			continue;
-		}
-
 		const JoltReadableBody3D collider_jolt_body = space->read_body(hit.mBodyID2);
 		const JoltShapedObjectImpl3D* collider = collider_jolt_body.as_shaped();
 		ERR_FAIL_NULL_D(collider);
@@ -1159,7 +1121,7 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_collide(
 			PhysicsServer3DExtensionMotionCollision& collision = p_result->collisions[count++];
 
 			collision.position = position;
-			collision.normal = to_godot(-hit.mPenetrationAxis.Normalized());
+			collision.normal = normal;
 			collision.collider_velocity = collider->get_velocity_at_position(position);
 			collision.collider_angular_velocity = collider->get_angular_velocity();
 			collision.depth = penetration_depth;
@@ -1183,6 +1145,26 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_collide(
 	return count > 0;
 }
 
+int JoltPhysicsDirectSpaceState3D::_try_get_face_index(
+	const JPH::Body& p_body,
+	const JPH::SubShapeID& p_sub_shape_id
+) {
+	if (!JoltProjectSettings::enable_ray_cast_face_index()) {
+		return -1;
+	}
+
+	const JPH::Shape* root_shape = p_body.GetShape();
+	JPH::SubShapeID sub_shape_id_remainder;
+	const JPH::Shape* leaf_shape = root_shape->GetLeafShape(p_sub_shape_id, sub_shape_id_remainder);
+
+	if (leaf_shape->GetType() != JPH::EShapeType::Mesh) {
+		return -1;
+	}
+
+	const auto* mesh_shape = static_cast<const JPH::MeshShape*>(leaf_shape);
+	return (int)mesh_shape->GetTriangleUserData(sub_shape_id_remainder);
+}
+
 void JoltPhysicsDirectSpaceState3D::_generate_manifold(
 	const JPH::CollideShapeResult& p_hit,
 	JPH::ContactPoints& p_contact_points1,
@@ -1194,11 +1176,12 @@ void JoltPhysicsDirectSpaceState3D::_generate_manifold(
 ) const {
 	const JPH::PhysicsSystem& physics_system = space->get_physics_system();
 	const JPH::PhysicsSettings& physics_settings = physics_system.GetPhysicsSettings();
+	const JPH::Vec3 penetration_axis = p_hit.mPenetrationAxis.Normalized();
 
 	JPH::ManifoldBetweenTwoFaces(
 		p_hit.mContactPointOn1,
 		p_hit.mContactPointOn2,
-		p_hit.mPenetrationAxis,
+		penetration_axis,
 		physics_settings.mManifoldToleranceSq,
 		p_hit.mShape1Face,
 		p_hit.mShape2Face,
@@ -1212,7 +1195,7 @@ void JoltPhysicsDirectSpaceState3D::_generate_manifold(
 
 	if (p_contact_points1.size() > 4) {
 		JPH::PruneContactPoints(
-			p_hit.mPenetrationAxis,
+			penetration_axis,
 			p_contact_points1,
 			p_contact_points2
 #ifdef JPH_DEBUG_RENDERER

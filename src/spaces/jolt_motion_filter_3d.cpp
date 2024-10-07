@@ -10,7 +10,7 @@
 #include "spaces/jolt_space_3d.hpp"
 
 JoltMotionFilter3D::JoltMotionFilter3D(const JoltBodyImpl3D& p_body, bool p_collide_separation_ray)
-	: physics_server(*static_cast<JoltPhysicsServer3D*>(PhysicsServer3D::get_singleton()))
+	: physics_server(*JoltPhysicsServer3D::get_singleton())
 	, body_self(p_body)
 	, space(*body_self.get_space())
 	, collide_separation_ray(p_collide_separation_ray) { }
@@ -20,6 +20,7 @@ bool JoltMotionFilter3D::ShouldCollide(JPH::BroadPhaseLayer p_broad_phase_layer)
 
 	switch (broad_phase_layer) {
 		case (JPH::BroadPhaseLayer::Type)JoltBroadPhaseLayer::BODY_STATIC:
+		case (JPH::BroadPhaseLayer::Type)JoltBroadPhaseLayer::BODY_STATIC_BIG:
 		case (JPH::BroadPhaseLayer::Type)JoltBroadPhaseLayer::BODY_DYNAMIC: {
 			return true;
 		} break;
@@ -28,7 +29,7 @@ bool JoltMotionFilter3D::ShouldCollide(JPH::BroadPhaseLayer p_broad_phase_layer)
 			return false;
 		} break;
 		default: {
-			ERR_FAIL_D_MSG(vformat("Unhandled broad phase layer: '%d'", broad_phase_layer));
+			ERR_FAIL_D_REPORT(vformat("Unhandled broad phase layer: '%d'.", broad_phase_layer));
 		}
 	}
 }

@@ -1,6 +1,7 @@
 #include "jolt_shape_impl_3d.hpp"
 
 #include "objects/jolt_shaped_object_impl_3d.hpp"
+#include "shapes/jolt_custom_double_sided_shape.hpp"
 #include "shapes/jolt_custom_user_data_shape.hpp"
 
 namespace {
@@ -52,6 +53,14 @@ JPH::ShapeRefC JoltShapeImpl3D::try_build() {
 	}
 
 	return jolt_ref;
+}
+
+void JoltShapeImpl3D::destroy() {
+	jolt_ref = nullptr;
+
+	for (const auto& [owner, ref_count] : ref_counts_by_owner) {
+		owner->_shapes_changed();
+	}
 }
 
 JPH::ShapeRefC JoltShapeImpl3D::with_scale(const JPH::Shape* p_shape, const Vector3& p_scale) {
@@ -158,9 +167,29 @@ JPH::ShapeRefC JoltShapeImpl3D::with_user_data(const JPH::Shape* p_shape, uint64
 	return shape_result.Get();
 }
 
+JPH::ShapeRefC JoltShapeImpl3D::with_double_sided(
+	const JPH::Shape* p_shape,
+	bool p_back_face_collision
+) {
+	ERR_FAIL_NULL_D(p_shape);
+
+	const JoltCustomDoubleSidedShapeSettings shape_settings(p_shape, p_back_face_collision);
+	const JPH::ShapeSettings::ShapeResult shape_result = shape_settings.Create();
+
+	ERR_FAIL_COND_D_MSG(
+		shape_result.HasError(),
+		vformat(
+			"Failed to make shape double-sided. "
+			"It returned the following error: '%s'.",
+			to_godot(shape_result.GetError())
+		)
+	);
+
+	return shape_result.Get();
+}
+
 JPH::ShapeRefC JoltShapeImpl3D::without_custom_shapes(const JPH::Shape* p_shape) {
 	switch (p_shape->GetSubType()) {
-		case JoltCustomShapeSubType::EMPTY:
 		case JoltCustomShapeSubType::RAY:
 		case JoltCustomShapeSubType::MOTION: {
 			// Replace unsupported shapes with a small sphere
@@ -280,10 +309,18 @@ JPH::ShapeRefC JoltShapeImpl3D::without_custom_shapes(const JPH::Shape* p_shape)
 	}
 }
 
-void JoltShapeImpl3D::_invalidated() {
-	for (const auto& [owner, ref_count] : ref_counts_by_owner) {
-		owner->_shapes_changed();
-	}
+Vector3 JoltShapeImpl3D::make_scale_valid(const JPH::Shape* p_shape, const Vector3& p_scale) {
+	return to_godot(p_shape->MakeScaleValid(to_jolt(p_scale)));
+}
+
+bool JoltShapeImpl3D::is_scale_valid(
+	const Vector3& p_scale,
+	const Vector3& p_valid_scale,
+	real_t p_tolerance
+) {
+	return Math::is_equal_approx(p_scale.x, p_valid_scale.x, p_tolerance) &&
+		Math::is_equal_approx(p_scale.y, p_valid_scale.y, p_tolerance) &&
+		Math::is_equal_approx(p_scale.z, p_valid_scale.z, p_tolerance);
 }
 
 String JoltShapeImpl3D::_owners_to_string() const {

@@ -3,7 +3,7 @@
 class JoltPhysicsServer3D;
 
 class JoltJoint3D : public Node3D {
-	GDCLASS_NO_WARN(JoltJoint3D, Node3D)
+	GDCLASS_QUIET(JoltJoint3D, Node3D)
 
 private:
 	static void _bind_methods();
@@ -41,8 +41,6 @@ public:
 
 	void set_solver_position_iterations(int32_t p_iterations);
 
-	void body_exiting_tree();
-
 	PackedStringArray _get_configuration_warnings() const override;
 
 protected:
@@ -62,6 +60,8 @@ protected:
 	) { }
 
 	void _notification(int32_t p_what);
+
+	void _body_exiting_tree();
 
 	void _connect_bodies();
 

@@ -5,7 +5,7 @@ class JoltShapeImpl3D;
 class JoltSpace3D;
 
 class JoltPhysicsDirectSpaceState3D final : public PhysicsDirectSpaceState3DExtension {
-	GDCLASS_NO_WARN(JoltPhysicsDirectSpaceState3D, PhysicsDirectSpaceState3DExtension)
+	GDCLASS_QUIET(JoltPhysicsDirectSpaceState3D, PhysicsDirectSpaceState3DExtension)
 
 private:
 	static void _bind_methods() { }
@@ -137,11 +137,13 @@ private:
 	bool _body_motion_collide(
 		const JoltBodyImpl3D& p_body,
 		const Transform3D& p_transform,
-		float p_distance,
+		const Vector3& p_motion,
 		float p_margin,
 		int32_t p_max_collisions,
 		PhysicsServer3DExtensionMotionResult* p_result
 	) const;
+
+	int _try_get_face_index(const JPH::Body& p_body, const JPH::SubShapeID& p_sub_shape_id);
 
 	void _generate_manifold(
 		const JPH::CollideShapeResult& p_hit,

@@ -1,7 +1,6 @@
 #include "jolt_height_map_shape_impl_3d.hpp"
 
 #include "servers/jolt_project_settings.hpp"
-#include "shapes/jolt_custom_double_sided_shape.hpp"
 
 Variant JoltHeightMapShapeImpl3D::get_data() const {
 	Dictionary data;
@@ -12,12 +11,6 @@ Variant JoltHeightMapShapeImpl3D::get_data() const {
 }
 
 void JoltHeightMapShapeImpl3D::set_data(const Variant& p_data) {
-	ON_SCOPE_EXIT {
-		_invalidated();
-	};
-
-	destroy();
-
 	ERR_FAIL_COND(p_data.get_type() != Variant::DICTIONARY);
 
 	const Dictionary data = p_data;
@@ -39,6 +32,10 @@ void JoltHeightMapShapeImpl3D::set_data(const Variant& p_data) {
 	heights = maybe_heights;
 	width = maybe_width;
 	depth = maybe_depth;
+
+	aabb = _calculate_aabb();
+
+	destroy();
 }
 
 String JoltHeightMapShapeImpl3D::to_string() const {
@@ -73,17 +70,17 @@ JPH::ShapeRefC JoltHeightMapShapeImpl3D::_build() const {
 	);
 
 	if (width != depth) {
-		return _build_double_sided(_build_mesh());
+		return JoltShapeImpl3D::with_double_sided(_build_mesh(), true);
 	}
 
 	const int32_t block_size = 2; // Default of JPH::HeightFieldShapeSettings::mBlockSize
 	const int32_t block_count = width / block_size;
 
 	if (block_count < 2) {
-		return _build_double_sided(_build_mesh());
+		return JoltShapeImpl3D::with_double_sided(_build_mesh(), true);
 	}
 
-	return _build_double_sided(_build_height_field());
+	return JoltShapeImpl3D::with_double_sided(_build_height_field(), true);
 }
 
 JPH::ShapeRefC JoltHeightMapShapeImpl3D::_build_height_field() const {
@@ -224,20 +221,30 @@ JPH::ShapeRefC JoltHeightMapShapeImpl3D::_build_mesh() const {
 	return shape_result.Get();
 }
 
-JPH::ShapeRefC JoltHeightMapShapeImpl3D::_build_double_sided(const JPH::Shape* p_shape) const {
-	ERR_FAIL_NULL_D(p_shape);
+AABB JoltHeightMapShapeImpl3D::_calculate_aabb() const {
+	AABB result;
 
-	const JoltCustomDoubleSidedShapeSettings shape_settings(p_shape);
-	const JPH::ShapeSettings::ShapeResult shape_result = shape_settings.Create();
+	const int32_t quad_count_x = width - 1;
+	const int32_t quad_count_z = depth - 1;
 
-	ERR_FAIL_COND_D_MSG(
-		shape_result.HasError(),
-		vformat(
-			"Failed to make shape double-sided. "
-			"It returned the following error: '%s'.",
-			to_godot(shape_result.GetError())
-		)
-	);
+	const float offset_x = (float)-quad_count_x / 2.0f;
+	const float offset_z = (float)-quad_count_z / 2.0f;
 
-	return shape_result.Get();
+	for (int32_t z = 0; z < depth; ++z) {
+		for (int32_t x = 0; x < width; ++x) {
+			const Vector3 vertex(
+				offset_x + (float)x,
+				(float)heights[z * width + x],
+				offset_z + (float)z
+			);
+
+			if (x == 0 && z == 0) {
+				result.position = vertex;
+			} else {
+				result.expand_to(vertex);
+			}
+		}
+	}
+
+	return result;
 }
